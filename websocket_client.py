@@ -80,13 +80,8 @@ class WebSocketClient:
         if self.last_server_action:
             action = self.last_server_action
             self.reset_action()  # Nach Abruf zurücksetzen
+            print(f"🔍 Aktion von WebSocket: {action}")  # Debug-Print
             return action
-
-        # Fallback im Testmodus: Manuelle Eingabe
-        if self.test_mode:
-            action = input("🧪 Manuelle Eingabe (save / skip / leer): ").strip().lower()
-            return action if action in ["save", "skip"] else None
-
         return None
 
     def reset_action(self):

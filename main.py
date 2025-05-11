@@ -88,14 +88,14 @@ def handle_server_file(file_path):
 
 
 def wait_for_server_response(filename):
-    print(f"⏳ Warte auf Anweisung vom Server für: {filename}")
+    print(f"Warte auf Anweisung vom Server für: {filename}")
     start_time = time.time()
 
     while True:
         # Überprüfen, ob ein neues Bild im SERVER_FOLDER erschienen ist
         new_files = os.listdir(SERVER_FOLDER)
         if new_files:
-            print(f"🔄 Neues Bild erkannt – Wartevorgang abgebrochen")
+            print(f"Neues Bild erkannt – Wartevorgang abgebrochen")
             ws_client.send_result(filename, "Speichern abgebrochen – Neues Bild eingetroffen")
             ws_client.send_result(filename, "skip")  # An Server melden, dass gespeichert wird
             return

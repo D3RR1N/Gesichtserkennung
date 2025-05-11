@@ -7,7 +7,11 @@ Befehle:
 
 conda activate faceenv
 
-cd "Pfad zum Projekt"- zum Beispiel cd C:\User\Derrin\PycharmProjects\Gesichtserkennung
+cd "Pfad zum Projekt" 
+
+zum Beispiel 
+
+cd C:\Users\Derrin\PycharmProjects\Gesichtserkennung
 
 dann staren wir die "python Bildformatieren.py"
 
