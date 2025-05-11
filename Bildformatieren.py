@@ -28,7 +28,7 @@ def format_image(image_path):
                     elif orientation == 8:
                         img = img.rotate(90, expand=True)
             except Exception as e:
-                print(f"⚠️ Fehler bei der Exif-Rotation: {e}")
+                print(f"Fehler bei der Exif-Rotation: {e}")
 
             # Bild in RGB konvertieren und Größe anpassen
             img = img.convert("RGB")
@@ -40,13 +40,13 @@ def format_image(image_path):
 
             # Bild speichern
             img.save(formatted_path, "JPEG", quality=80)
-            print(f"✅ Bild erfolgreich formatiert: {formatted_path}")
+            print(f"Bild erfolgreich formatiert: {formatted_path}")
     except Exception as e:
-        print(f"❌ Fehler bei der Formatierung von {image_path}: {e}")
+        print(f"Fehler bei der Formatierung von {image_path}: {e}")
 
 
 if __name__ == "__main__":
-    print("📂 Bildformatierer gestartet - wartet auf Bilder im Test-Ordner...")
+    print("Bildformatierer gestartet - wartet auf Bilder im Test-Ordner...")
     while True:
         files = os.listdir(test_folder)
         for file in files:

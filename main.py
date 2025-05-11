@@ -88,24 +88,31 @@ def handle_server_file(file_path):
 
 
 def wait_for_server_response(filename):
-    print(f"Warte auf Anweisung vom Server für: {filename}")
+    print(f"⏳ Warte auf Anweisung vom Server für: {filename}")
     start_time = time.time()
 
     while True:
         # Überprüfen, ob ein neues Bild im SERVER_FOLDER erschienen ist
-        if os.listdir(SERVER_FOLDER):
-            print(f"Neues Bild erkannt – Wartevorgang abgebrochen")
+        new_files = os.listdir(SERVER_FOLDER)
+        if new_files:
+            print(f"🔄 Neues Bild erkannt – Wartevorgang abgebrochen")
             ws_client.send_result(filename, "Speichern abgebrochen – Neues Bild eingetroffen")
+            ws_client.send_result(filename, "skip")  # An Server melden, dass gespeichert wird
             return
 
         # Überprüfung auf Serveraktion "save"
         action = ws_client.get_last_action()
+        print(f"Aktion vom Server erhalten: {action}")  # Debug-Print zur Prüfung der Aktion
+
         if action:
             print(f"Server-Aktion empfangen: {action}")
             if action == "save":
                 try:
-                    shutil.move(os.path.join(UNKNOWN_FOLDER, filename + ".npy"),
-                                os.path.join(KNOWN_FOLDER, filename + ".npy"))
+                    src_path = os.path.join(UNKNOWN_FOLDER, filename + ".npy")
+                    dest_path = os.path.join(KNOWN_FOLDER, filename + ".npy")
+                    print(f"Verschiebe Datei von {src_path} nach {dest_path}")  # Debug-Print
+
+                    shutil.move(src_path, dest_path)
                     clear_unknown_faces()
                     print(f"Neuer Patient gespeichert: {filename}")
                     ws_client.send_result(filename, "Gesicht gespeichert")
@@ -114,7 +121,9 @@ def wait_for_server_response(filename):
                     ws_client.send_result(filename, "Gesicht konnte nicht gespeichert werden")
                 ws_client.reset_action()
                 break
+
         time.sleep(1)
+
 
 if __name__ == "__main__":
     os.makedirs(KNOWN_FOLDER, exist_ok=True)
@@ -124,6 +133,8 @@ if __name__ == "__main__":
     print("👁 Gesichtserkennungssystem gestartet – wartet auf neue Bilder...")
     while True:
         files = os.listdir(SERVER_FOLDER)
-        for file in files:
-            handle_server_file(os.path.join(SERVER_FOLDER, file))
+        if files:
+            for file in files:
+                print(f"Neues Bild gefunden: {file}")
+                handle_server_file(os.path.join(SERVER_FOLDER, file))
         time.sleep(1)

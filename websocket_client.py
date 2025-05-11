@@ -31,12 +31,12 @@ class WebSocketClient:
                 self.ws.run_forever()
             except Exception as e:
                 print(f"🔌 Verbindungsfehler: {e}")
-            print("🔁 Versuche erneut in 3 Sekunden...")
+            print("Versuche erneut in 3 Sekunden...")
             time.sleep(3)
 
     def on_open(self, ws):
         self.connected = True
-        print("✅ WebSocket verbunden.")
+        print("WebSocket verbunden.")
         # Nachrichten aus der Warteschlange senden
         while not self.message_queue.empty():
             payload = self.message_queue.get()
@@ -44,18 +44,18 @@ class WebSocketClient:
 
     def on_close(self, ws, close_status_code, close_msg):
         self.connected = False
-        print(f"❌ WebSocket getrennt: {close_msg}")
+        print(f"WebSocket getrennt: {close_msg}")
 
     def on_error(self, ws, error):
-        print(f"⚠️ WebSocket-Fehler: {error}")
+        print(f"WebSocket-Fehler: {error}")
 
     def on_message(self, ws, message):
-        print(f"📨 Nachricht vom Server: {message}")
+        print(f"Nachricht vom Server: {message}")
         try:
             data = json.loads(message)
             self.last_server_action = data.get("action")
         except json.JSONDecodeError:
-            print("⚠️ Ungültiges JSON empfangen.")
+            print("Ungültiges JSON empfangen.")
 
     def send_result(self, filename, result):
         payload = json.dumps(
@@ -64,22 +64,30 @@ class WebSocketClient:
         if self.connected:
             self._send_raw(payload)
         else:
-            print("🕓 Verbindung nicht verfügbar – Nachricht wird zwischengespeichert.")
+            print("Verbindung nicht verfügbar – Nachricht wird zwischengespeichert.")
             self.message_queue.put(payload)
 
     def _send_raw(self, payload):
         try:
             self.ws.send(payload)
-            print(f"📤 Nachricht gesendet: {payload}")
+            print(f"Nachricht gesendet: {payload}")
         except Exception as e:
-            print(f"❌ Fehler beim Senden: {e}")
+            print(f"Fehler beim Senden: {e}")
             self.message_queue.put(payload)
 
     def get_last_action(self):
+        # Priorisiere die Serverantwort, wenn vorhanden
+        if self.last_server_action:
+            action = self.last_server_action
+            self.reset_action()  # Nach Abruf zurücksetzen
+            return action
+
+        # Fallback im Testmodus: Manuelle Eingabe
         if self.test_mode:
             action = input("🧪 Manuelle Eingabe (save / skip / leer): ").strip().lower()
             return action if action in ["save", "skip"] else None
-        return self.last_server_action
+
+        return None
 
     def reset_action(self):
         self.last_server_action = None
