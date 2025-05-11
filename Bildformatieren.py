@@ -3,7 +3,7 @@ import time
 from PIL import Image, ExifTags
 
 # Ordnerpfade
-test_folder = "Test"
+test_folder = "Serverordner"
 formatted_folder = "Formatted"
 os.makedirs(formatted_folder, exist_ok=True)
 

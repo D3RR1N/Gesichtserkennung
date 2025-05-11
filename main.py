@@ -8,7 +8,7 @@ from websocket_client import WebSocketClient
 
 KNOWN_FOLDER = "known_faces"
 UNKNOWN_FOLDER = "unknown_faces"
-SERVER_FOLDER = "Serverordner"
+SERVER_FOLDER = "Formatted"
 SERVER_URI = "ws://localhost:8765"
 
 ws_client = WebSocketClient(SERVER_URI)
@@ -26,12 +26,12 @@ def encode_and_store_unknown(image_path):
         if encodings:
             filename = os.path.basename(image_path)
             np.save(os.path.join(UNKNOWN_FOLDER, filename), encodings[0])
-            print(f"✅ Gesicht als Vektor gespeichert: {filename}")
+            print(f"Gesicht als Vektor gespeichert: {filename}")
             return filename
         else:
-            print(f"⚠️ Kein Gesicht erkannt in: {image_path}")
+            print(f"Kein Gesicht erkannt in: {image_path}")
     except Exception as e:
-        print(f"❌ Fehler beim Verarbeiten von {image_path}: {e}")
+        print(f"Fehler beim Verarbeiten von {image_path}: {e}")
     return None
 
 def load_known_encodings():
@@ -54,14 +54,14 @@ def clear_unknown_faces():
         try:
             os.remove(file_path)
         except Exception as e:
-            print(f"❌ Fehler beim Löschen von {file_path}: {e}")
+            print(f"Fehler beim Löschen von {file_path}: {e}")
 
 def handle_server_file(file_path):
     filename = os.path.basename(file_path)
 
     # 📸 Prüfen, ob es sich um ein unterstütztes Bildformat handelt
     if not filename.lower().endswith((".jpg", ".jpeg", ".png")):
-        print(f"⚠️ Datei ist kein Bild: {filename}")
+        print(f"Datei ist kein Bild: {filename}")
         ws_client.send_result(filename, "Datei ist kein Bild")
         os.remove(file_path)
         return
@@ -70,7 +70,7 @@ def handle_server_file(file_path):
     os.remove(file_path)
 
     if not encoded_filename:
-        print(f"⚠️ Rückmeldung an Server: Kein Gesicht im Bild erkannt → {filename}")
+        print(f"Rückmeldung an Server: Kein Gesicht im Bild erkannt → {filename}")
         ws_client.send_result(filename, "Kein Gesicht im Bild erkannt")
         return
 
@@ -78,35 +78,42 @@ def handle_server_file(file_path):
     known_encodings, _ = load_known_encodings()
 
     if compare_faces(known_encodings, test_encoding):
-        print(f"✅ Gesicht erkannt → {encoded_filename}")
-        recognized_name = os.path.splitext(os.path.basename(encoded_filename))[0]
-        ws_client.send_result(recognized_name, "Gesicht erkannt")
+        print(f"Gesicht erkannt → {encoded_filename}")
+        ws_client.send_result(encoded_filename, "Gesicht erkannt")
         clear_unknown_faces()
     else:
-        print(f"❌ Gesicht nicht erkannt → {encoded_filename}")
+        print(f"Gesicht nicht erkannt → {encoded_filename}")
         ws_client.send_result(encoded_filename, "Gesicht nicht erkannt")
         wait_for_server_response(encoded_filename)
 
+
 def wait_for_server_response(filename):
-    print(f"⏳ Warte auf Anweisung vom Server für: {filename}")
+    print(f"Warte auf Anweisung vom Server für: {filename}")
+    start_time = time.time()
+
     while True:
+        # Überprüfen, ob ein neues Bild im SERVER_FOLDER erschienen ist
+        if os.listdir(SERVER_FOLDER):
+            print(f"Neues Bild erkannt – Wartevorgang abgebrochen")
+            ws_client.send_result(filename, "Speichern abgebrochen – Neues Bild eingetroffen")
+            return
+
+        # Überprüfung auf Serveraktion "save"
         action = ws_client.get_last_action()
         if action:
-            print(f"🔁 Server-Aktion empfangen: {action}")
+            print(f"Server-Aktion empfangen: {action}")
             if action == "save":
                 try:
                     shutil.move(os.path.join(UNKNOWN_FOLDER, filename + ".npy"),
                                 os.path.join(KNOWN_FOLDER, filename + ".npy"))
                     clear_unknown_faces()
-                    print(f"✅ Neuer Patient gespeichert: {filename}")
+                    print(f"Neuer Patient gespeichert: {filename}")
                     ws_client.send_result(filename, "Gesicht gespeichert")
                 except Exception as e:
-                    print(f"❌ Fehler beim Speichern von {filename}: {e}")
+                    print(f"Fehler beim Speichern von {filename}: {e}")
                     ws_client.send_result(filename, "Gesicht konnte nicht gespeichert werden")
-            elif action == "skip":
-                print("⏭ Vorgang vom Server abgebrochen")
-            ws_client.reset_action()
-            break
+                ws_client.reset_action()
+                break
         time.sleep(1)
 
 if __name__ == "__main__":
