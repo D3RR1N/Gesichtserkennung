@@ -30,7 +30,7 @@ class WebSocketClient:
                 )
                 self.ws.run_forever()
             except Exception as e:
-                print(f"🔌 Verbindungsfehler: {e}")
+                print(f"Verbindungsfehler: {e}")
             print("Versuche erneut in 3 Sekunden...")
             time.sleep(3)
 
@@ -80,7 +80,7 @@ class WebSocketClient:
         if self.last_server_action:
             action = self.last_server_action
             self.reset_action()  # Nach Abruf zurücksetzen
-            print(f"🔍 Aktion von WebSocket: {action}")  # Debug-Print
+            print(f"Aktion von WebSocket: {action}")  # Debug-Print
             return action
         return None
 
