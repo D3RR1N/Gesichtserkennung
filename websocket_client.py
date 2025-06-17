@@ -37,7 +37,8 @@ class WebSocketClient:
     def on_open(self, ws):
         self.connected = True
         print("WebSocket verbunden.")
-        # Nachrichten aus der Warteschlange senden
+        self.ws.send("ge")
+
         while not self.message_queue.empty():
             payload = self.message_queue.get()
             self._send_raw(payload)
