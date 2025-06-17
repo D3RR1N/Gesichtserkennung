@@ -7,34 +7,28 @@ import numpy as np
 from websocket_client import WebSocketClient
 
 # Ordnerpfade
-UPLOAD_FOLDER = "Serverordner"
+#UPLOAD_FOLDER = r"\\192.168.19.95\gesicht"
+UPLOAD_FOLDER = r"C:\Users\Derrin\DEV\Server\uploads\gesicht"
 FORMATTED_FOLDER = "Formatted"
 KNOWN_FOLDER = "known_faces"
 UNKNOWN_FOLDER = "unknown_faces"
+#SERVER_URI = "ws://192.168.19.95:3001"
 SERVER_URI = "ws://localhost:3001"
 
 # WebSocket-Verbindung
 ws_client = WebSocketClient(SERVER_URI)
-ws_client.send("GE")  # GE als Initialsignal senden
 
-
-# Ordner erstellen
-for folder in [UPLOAD_FOLDER, FORMATTED_FOLDER, KNOWN_FOLDER, UNKNOWN_FOLDER]:
-    os.makedirs(folder, exist_ok=True)
-
-# 🔢 Freie Nummer ermitteln
+# Freie Nummer ermitteln
 def get_next_available_number():
     used_numbers = set()
 
-    # known_faces
     for file in os.listdir(KNOWN_FOLDER):
         name = os.path.splitext(file)[0]
-        if name.endswith(".jpg"):  # z.B. 1.jpg.npy
+        if name.endswith(".jpg"):
             name = os.path.splitext(name)[0]
         if name.isdigit():
             used_numbers.add(int(name))
 
-    # Formatted
     for file in os.listdir(FORMATTED_FOLDER):
         name = os.path.splitext(file)[0]
         if name.isdigit():
@@ -66,6 +60,8 @@ def format_image(image_path):
                 print(f"Exif-Fehler: {e}")
 
             img = img.convert("RGB")
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)  # Bild horizontal spiegeln
+
             next_number = get_next_available_number()
             formatted_filename = f"{next_number}.jpg"
             formatted_path = os.path.join(FORMATTED_FOLDER, formatted_filename)
@@ -81,7 +77,7 @@ def load_image_rgb(path):
     with Image.open(path) as img:
         return np.array(img.convert('RGB'))
 
-# 3. Gesicht erkennen → unknown_faces
+# 3. Gesicht erkennen
 def encode_and_store_unknown(image_path):
     try:
         image = load_image_rgb(image_path)
@@ -108,7 +104,7 @@ def load_known_encodings():
             names.append(name)
     return encodings, names
 
-# 5. Vergleich → liefert den Namen des Matches
+# 5. Vergleich
 def find_matching_known_face(known_encodings, known_names, test_encoding):
     matches = face_recognition.compare_faces(known_encodings, test_encoding)
     for match, name in zip(matches, known_names):
@@ -137,7 +133,7 @@ def handle_formatted_file(file_path):
     os.remove(file_path)
 
     if not encoded_filename:
-        ws_client.send_result(encoded_filename, "Kein Gesicht erkannt")
+        ws_client.send_result(encoded_filename, "Kein Gesicht im Bild erkannt")
         return
 
     test_encoding = np.load(os.path.join(UNKNOWN_FOLDER, encoded_filename + ".npy"))
@@ -158,9 +154,8 @@ def wait_for_server_response(filename):
     print(f"Warte auf Aktion vom Server für: {filename}")
     while True:
         if os.listdir(UPLOAD_FOLDER):
-            ws_client.send_result(filename, "Speichern abgebrochen – neues Bild eingetroffen")
-            ws_client.send_result(filename, "skip")
-            return
+            print(f"Neues Bild erkannt – Speichern von {filename} wird übersprungen.")
+            break
 
         action = ws_client.get_last_action()
         if action == "save":
@@ -178,18 +173,25 @@ def wait_for_server_response(filename):
 
         time.sleep(1)
 
-# 🟢 Hauptprogramm
+# Hauptprogramm
 if __name__ == "__main__":
     print("Gesichtserkennungssystem läuft...")
 
     while True:
+        # Prüfen, ob neue Bilder im Upload-Ordner vorhanden sind
         for file in os.listdir(UPLOAD_FOLDER):
             if file.lower().endswith((".jpg", ".jpeg", ".png")):
                 original_path = os.path.join(UPLOAD_FOLDER, file)
+
+                file_age = time.time() - os.path.getmtime(original_path)
+                if file_age < 6:
+                    continue  # Datei ist noch zu frisch
+
                 formatted_filename = format_image(original_path)
                 if formatted_filename:
                     os.remove(original_path)
 
+        # Formatierte Bilder verarbeiten
         for file in os.listdir(FORMATTED_FOLDER):
             file_path = os.path.join(FORMATTED_FOLDER, file)
             handle_formatted_file(file_path)
